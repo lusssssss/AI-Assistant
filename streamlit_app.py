@@ -3,6 +3,9 @@ from groq import Groq
 
 st.set_page_config(page_title="AI Engineering Assistant", page_icon="✨", layout="wide")
 
+SUPABASE_URL = "https://dyvczgsexqhfxqeulxus.supabase.co"
+SUPABASE_KEY = "sb_publishable_bIaQbxOUbAYculAfpK8Yvg_A0MJKXgf"
+
 # CSS "Hack" để đẩy tin nhắn User sang phải và đổi màu
 st.markdown("""
 <style>

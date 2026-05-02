@@ -2,85 +2,99 @@ import streamlit as st
 from groq import Groq
 from supabase import create_client
 
-st.set_page_config(page_title="AI Engineering Assistant", page_icon="✨", layout="wide")
+st.set_page_config(page_title="AI Engineering Assistant", page_icon="⚙️", layout="wide")
 
-# 1. KẾT NỐI SUPABASE
+# 1. KẾT NỐI SUPABASE (Đã dán thông tin của bạn)
 SUPABASE_URL = "https://dyvczgsexqhfxqeulxus.supabase.co"
 SUPABASE_KEY = "sb_publishable_bIaQbxOUbAYculAfpK8Yvg_A0MJKXgf"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# 2. CSS "Hack" (ĐÃ XÓA DÒNG `header {visibility: hidden;}` ĐỂ TRẢ LẠI NÚT `>`)
+# 2. GIAO DIỆN DEVELOPER TỐI ƯU
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
     .stChatMessage {
-        border-radius: 15px;
-        padding: 10px 20px;
-        margin-bottom: 10px;
+        border-radius: 6px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.6;
     }
     
-    /* Ép tin nhắn NGƯỜI DÙNG sang phải, nền xanh nhạt */
     div[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarUser"]) {
-        background-color: #e3f2fd !important;
-        flex-direction: row-reverse;
-        text-align: right;
+        background-color: #ffffff !important;
+        border: 1px solid #e1e4e8;
+        border-right: 4px solid #2ea44f;
     }
     
-    /* Tin nhắn AI bên trái, nền xám nhạt */
     div[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarAssistant"]) {
-        background-color: #f8f9fa !important;
-        border: 1px solid #e0e4e8;
+        background-color: #f6f8fa !important;
+        border: 1px solid #e1e4e8;
+        border-left: 4px solid #0366d6;
     }
     
     [data-testid="stSidebar"] {
-        background-color: #f0f4f8;
+        background-color: #f8f9fa;
+        border-right: 1px solid #e1e4e8;
+    }
+    
+    /* Mở rộng khung hiển thị code và làm nổi bật */
+    pre {
+        background-color: #282c34 !important;
+        color: #abb2bf !important;
+        border-radius: 6px;
+        padding: 15px;
+    }
+    code {
+        color: #e06c75;
+        background-color: rgba(27,31,35,0.05);
+        border-radius: 3px;
+        font-family: 'Fira Code', Consolas, monospace;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. YÊU CẦU ĐĂNG NHẬP (Để AI biết đang chat với ai mà lưu dữ liệu)
+# 3. YÊU CẦU ĐĂNG NHẬP
 with st.sidebar:
-    st.title("✨ Trợ lý AI Kỹ thuật")
-    user_id = st.text_input("👤 Nhập ID cá nhân (VD: An123):", placeholder="Để nhớ bạn là ai")
-    api_key = st.text_input("🔑 Nhập Groq API Key:", type="password")
+    st.title("⚙️ AI Kỹ thuật Pro")
+    st.caption("Workspace Lập trình & Điều khiển Tự động")
+    user_id = st.text_input("👤 ID Kỹ sư:", placeholder="Nhập ID cá nhân...")
+    api_key = st.text_input("🔑 Groq API Key:", type="password")
     st.divider()
 
 if not user_id or not api_key:
-    st.warning("Vui lòng mở menu bên trái (nút >) nhập ID cá nhân và API Key để bắt đầu!")
+    st.info("Vui lòng mở menu bên trái (nút >) nhập ID và API Key để kích hoạt Workspace.")
     st.stop()
 
 client = Groq(api_key=api_key)
 
-# 4. TẢI TOÀN BỘ DỮ LIỆU TỪ DATABASE XUỐNG
+# 4. TẢI DỮ LIỆU TỪ DATABASE
 if "all_chats" not in st.session_state:
-    # Kéo dữ liệu của User này từ Supabase
     response = supabase.table("chat_history").select("*").eq("user_id", user_id).order("created_at").execute()
+    st.session_state.all_chats = {"Workspace 1": []}
     
-    st.session_state.all_chats = {"Cuộc trò chuyện 1": []}
-    
-    # Phân loại tin nhắn cũ vào đúng từng tab "Cuộc trò chuyện"
     for row in response.data:
-        c_name = row.get("chat_name", "Cuộc trò chuyện 1")
+        c_name = row.get("chat_name", "Workspace 1")
         if c_name not in st.session_state.all_chats:
             st.session_state.all_chats[c_name] = []
         st.session_state.all_chats[c_name].append({"role": row["role"], "content": row["content"]})
 
 if "current_chat" not in st.session_state:
-    st.session_state.current_chat = "Cuộc trò chuyện 1"
+    st.session_state.current_chat = "Workspace 1"
 
-# 5. GIAO DIỆN QUẢN LÝ CUỘC TRÒ CHUYỆN BÊN TRÁI
+# 5. QUẢN LÝ WORKSPACE BÊN TRÁI
 with st.sidebar:
-    if st.button("➕ Cuộc trò chuyện mới", use_container_width=True):
-        new_chat_name = f"Cuộc trò chuyện {len(st.session_state.all_chats) + 1}"
+    if st.button("➕ Mở Workspace mới", use_container_width=True):
+        new_chat_name = f"Workspace {len(st.session_state.all_chats) + 1}"
         st.session_state.all_chats[new_chat_name] = []
         st.session_state.current_chat = new_chat_name
     
     st.divider()
-    
     selected_chat = st.radio(
-        "Danh sách:", 
+        "Danh sách dự án:", 
         list(st.session_state.all_chats.keys()), 
         index=list(st.session_state.all_chats.keys()).index(st.session_state.current_chat),
         label_visibility="collapsed"
@@ -95,14 +109,13 @@ for message in current_messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-# 7. XỬ LÝ CHAT & LƯU LÊN CLOUD
-if prompt := st.chat_input("Nhập câu hỏi (Ví dụ: Viết code Arduino, phân tích LQR...)"):
+# 7. XỬ LÝ CHAT VỚI BỘ TƯ DUY KỸ SƯ TRƯỞNG
+if prompt := st.chat_input("Nhập yêu cầu phân tích hệ thống, thuật toán điều khiển, Code C++..."):
     
     with st.chat_message("user"):
         st.markdown(prompt)
     current_messages.append({"role": "user", "content": prompt})
 
-    # Đẩy câu hỏi của bạn lên Database ngay lập tức
     supabase.table("chat_history").insert({
         "user_id": user_id, 
         "role": "user", 
@@ -110,10 +123,24 @@ if prompt := st.chat_input("Nhập câu hỏi (Ví dụ: Viết code Arduino, ph
         "chat_name": st.session_state.current_chat
     }).execute()
 
-    # LỆNH THÉP: Ép AI dùng tiếng Việt và không nói nhảm
+    # BỘ NÃO V.3 MAX: Ép AI suy nghĩ sâu và tuân thủ chuẩn code công nghiệp
     system_prompt = {
         "role": "system", 
-        "content": "Bạn là chuyên gia kỹ thuật. TUYỆT ĐỐI KHÔNG SỬ DỤNG TIẾNG TRUNG QUỐC HOẶC KÝ TỰ LẠ. Chỉ trả lời bằng Tiếng Việt chuẩn xác. Mã nguồn C/C++ phải bọc trong ```cpp."
+        "content": """Bạn là một Chuyên gia Kỹ sư Cơ điện tử & Lập trình Hệ thống nhúng cấp cao.
+        Chuyên môn sâu: Vi điều khiển (đặc biệt là dòng ESP32), thuật toán điều khiển tự động (PID lồng nhau, LQR, bộ lọc dữ liệu), giao tiếp ngoại vi (I2C, SPI) và xử lý dữ liệu cảm biến thời gian thực.
+
+        QUY TRÌNH TƯ DUY VÀ VIẾT CODE BẮT BUỘC CỦA BẠN:
+        1. PHÂN TÍCH: Trình bày ngắn gọn logic toán học, sơ đồ khối, hoặc thuật toán trước khi viết code.
+        2. KIẾN TRÚC CODE CHUYÊN NGHIỆP:
+           - TUYỆT ĐỐI KHÔNG dùng hàm delay() gây nghẽn (blocking). Bắt buộc dùng millis(), micros() hoặc Ngắt (Interrupts / Timer) cho các tác vụ định thời.
+           - Chia code thành các hàm nhỏ (modular), rành mạch. Sử dụng biến cấu trúc (struct) nếu quản lý nhiều tham số.
+           - Áp dụng kỹ thuật State Machine (Máy trạng thái) cho các quy trình tuần tự.
+        3. CHẤT LƯỢNG CODE: 
+           - Code phải sạch, tối ưu bộ nhớ. Dùng các kiểu dữ liệu chuẩn xác (uint8_t, int16_t, float).
+           - Có comment tiếng Việt chi tiết ở các phần tính toán quan trọng.
+           - Xử lý các điều kiện biên (ràng buộc tín hiệu đầu ra, chống bão hòa tích phân - anti-windup cho PID).
+        4. NGÔN NGỮ: Chỉ trả lời bằng Tiếng Việt chuẩn xác. Bọc mã nguồn trong ```cpp hoặc ```python.
+        """
     }
     
     messages_to_send = [system_prompt] + current_messages
@@ -123,11 +150,13 @@ if prompt := st.chat_input("Nhập câu hỏi (Ví dụ: Viết code Arduino, ph
         full_response = ""
         
         try:
+            # Tăng nhẹ temperature để AI có thể "sáng tạo" các thuật toán tốt hơn, thay vì quá cứng nhắc
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=messages_to_send,
                 stream=True,
-                temperature=0.1,
+                temperature=0.3,
+                max_tokens=4096 
             )
             
             for chunk in completion:
@@ -143,7 +172,6 @@ if prompt := st.chat_input("Nhập câu hỏi (Ví dụ: Viết code Arduino, ph
     
     current_messages.append({"role": "assistant", "content": full_response})
     
-    # Đẩy câu trả lời của AI lên Database ngay lập tức
     supabase.table("chat_history").insert({
         "user_id": user_id, 
         "role": "assistant", 

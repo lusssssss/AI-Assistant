@@ -4,12 +4,12 @@ from supabase import create_client
 
 st.set_page_config(page_title="AI Engineering Assistant", page_icon="⚙️", layout="wide")
 
-# 1. KẾT NỐI SUPABASE (Đã dán thông tin của bạn)
+# 1. KẾT NỐI SUPABASE
 SUPABASE_URL = "https://dyvczgsexqhfxqeulxus.supabase.co"
 SUPABASE_KEY = "sb_publishable_bIaQbxOUbAYculAfpK8Yvg_A0MJKXgf"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# 2. GIAO DIỆN DEVELOPER TỐI ƯU
+# 2. GIAO DIỆN DEVELOPER TỐI ƯU & MENU CHUẨN AI
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
@@ -37,11 +37,25 @@ st.markdown("""
     }
     
     [data-testid="stSidebar"] {
-        background-color: #f8f9fa;
+        background-color: #f9fbfd;
         border-right: 1px solid #e1e4e8;
     }
     
-    /* Mở rộng khung hiển thị code và làm nổi bật */
+    /* Ẩn vòng tròn của nút Radio để menu bên trái giống danh sách nút bấm AI */
+    div[role="radiogroup"] > label > div:first-of-type {
+        display: none;
+    }
+    div[role="radiogroup"] > label {
+        padding: 8px 10px;
+        border-radius: 6px;
+        margin-bottom: 2px;
+        transition: background-color 0.2s ease;
+    }
+    div[role="radiogroup"] > label:hover {
+        background-color: #e1e4e8;
+        cursor: pointer;
+    }
+    
     pre {
         background-color: #282c34 !important;
         color: #abb2bf !important;
@@ -60,48 +74,52 @@ st.markdown("""
 # 3. YÊU CẦU ĐĂNG NHẬP
 with st.sidebar:
     st.title("⚙️ AI Kỹ thuật Pro")
-    st.caption("Workspace Lập trình & Điều khiển Tự động")
     user_id = st.text_input("👤 ID Kỹ sư:", placeholder="Nhập ID cá nhân...")
     api_key = st.text_input("🔑 Groq API Key:", type="password")
     st.divider()
 
 if not user_id or not api_key:
-    st.info("Vui lòng mở menu bên trái (nút >) nhập ID và API Key để kích hoạt Workspace.")
+    st.info("Vui lòng mở menu bên trái (nút >) nhập ID và API Key để kích hoạt.")
     st.stop()
 
 client = Groq(api_key=api_key)
 
-# 4. TẢI DỮ LIỆU TỪ DATABASE
+# 4. TẢI DỮ LIỆU TỪ DATABASE VÀ GOM NHÓM
 if "all_chats" not in st.session_state:
     response = supabase.table("chat_history").select("*").eq("user_id", user_id).order("created_at").execute()
-    st.session_state.all_chats = {"Workspace 1": []}
+    st.session_state.all_chats = {"Cuộc trò chuyện 1": []}
     
     for row in response.data:
-        c_name = row.get("chat_name", "Workspace 1")
+        # Nếu trên Supabase có lịch sử cũ tên là Workspace, tự động quy về Cuộc trò chuyện
+        raw_name = row.get("chat_name", "Cuộc trò chuyện 1")
+        c_name = raw_name.replace("Workspace", "Cuộc trò chuyện") 
+        
         if c_name not in st.session_state.all_chats:
             st.session_state.all_chats[c_name] = []
         st.session_state.all_chats[c_name].append({"role": row["role"], "content": row["content"]})
 
 if "current_chat" not in st.session_state:
-    st.session_state.current_chat = "Workspace 1"
+    st.session_state.current_chat = "Cuộc trò chuyện 1"
 
-# 5. QUẢN LÝ WORKSPACE BÊN TRÁI
+# 5. GIAO DIỆN MENU DANH SÁCH CHAT BÊN TRÁI
 with st.sidebar:
-    if st.button("➕ Mở Workspace mới", use_container_width=True):
-        new_chat_name = f"Workspace {len(st.session_state.all_chats) + 1}"
+    if st.button("➕ Cuộc trò chuyện mới", use_container_width=True):
+        new_chat_name = f"Cuộc trò chuyện {len(st.session_state.all_chats) + 1}"
         st.session_state.all_chats[new_chat_name] = []
         st.session_state.current_chat = new_chat_name
     
-    st.divider()
+    st.write("") # Tạo khoảng trống nhỏ
+    st.markdown("📝 **Lịch sử trò chuyện**") # Dòng tiêu đề hiển thị danh sách
+    
     selected_chat = st.radio(
-        "Danh sách dự án:", 
+        "Danh sách:", 
         list(st.session_state.all_chats.keys()), 
         index=list(st.session_state.all_chats.keys()).index(st.session_state.current_chat),
         label_visibility="collapsed"
     )
     st.session_state.current_chat = selected_chat
 
-# 6. HIỂN THỊ TIN NHẮN
+# 6. HIỂN THỊ TIN NHẮN TRONG KHUNG CHÍNH
 current_messages = st.session_state.all_chats[st.session_state.current_chat]
 
 for message in current_messages:
@@ -109,7 +127,7 @@ for message in current_messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-# 7. XỬ LÝ CHAT VỚI BỘ TƯ DUY KỸ SƯ TRƯỞNG
+# 7. XỬ LÝ CHAT VÀ VIẾT CODE
 if prompt := st.chat_input("Nhập yêu cầu phân tích hệ thống, thuật toán điều khiển, Code C++..."):
     
     with st.chat_message("user"):
@@ -123,7 +141,6 @@ if prompt := st.chat_input("Nhập yêu cầu phân tích hệ thống, thuật 
         "chat_name": st.session_state.current_chat
     }).execute()
 
-    # BỘ NÃO V.3 MAX: Ép AI suy nghĩ sâu và tuân thủ chuẩn code công nghiệp
     system_prompt = {
         "role": "system", 
         "content": """Bạn là một Chuyên gia Kỹ sư Cơ điện tử & Lập trình Hệ thống nhúng cấp cao.
@@ -150,7 +167,6 @@ if prompt := st.chat_input("Nhập yêu cầu phân tích hệ thống, thuật 
         full_response = ""
         
         try:
-            # Tăng nhẹ temperature để AI có thể "sáng tạo" các thuật toán tốt hơn, thay vì quá cứng nhắc
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=messages_to_send,
